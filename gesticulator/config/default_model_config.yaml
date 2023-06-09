@@ -13,7 +13,7 @@ run_name:   'last_run'
 # MJ: Each training sequence contains 70 consecutive frames from a larger recording. 
 # The first 10 and the last 20 frames establish context for the sliding window, while
 # the 40 central frames are used for training
-sequence_length: 40 # The length of each training sequence : 10 + 10 + 20 = 40
+sequence_length: 40 # The length of each training sequence = the central frames
 past_context: 10 # The number of past speech frames to use as context during prediction
 future_context: 20 # The number of future speech frames to use as context during prediction
 
@@ -48,9 +48,9 @@ n_prev_poses: 3 # For autoregression
 
 # MJ: Speech-encoding dimensionality 124 at each of 30 frames, producing 3720 (= 124 x 30) elements after concatenation.
 
-# MJ: self.reduce_speech_enc = nn.Sequential(nn.Linear(int(args.speech_enc_frame_dim * \
-#                                                         (args.past_context + args.future_context)),
-#                                                          args.full_speech_enc_dim),
+# MJ: self.reduce_speech_enc = nn.Sequential(    nn.Linear(   int(args.speech_enc_frame_dim * \
+#                                                                  (args.past_context + args.future_context)),
+#                                                             args.full_speech_enc_dim),
 #                                                self.activation, nn.Dropout(args.dropout))
 # =  nn.Sequential(  nn.Linear( 124 * (10 + 20), 612), 
 #                   self.activation, nn.Dropout(args.dropout)

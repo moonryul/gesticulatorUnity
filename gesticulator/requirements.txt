@@ -63,7 +63,7 @@ tensorboard==2.2.0
 tensorboard-plugin-wit==1.6.0.post2
 tensorboardX==2.0
 tokenizers==0.10.1
-torch
+torch==1.9.0
 torchtext==0.4.0
 tqdm==4.44.1
 transformers==4.3.2

@@ -49,22 +49,23 @@ class GesturePredictor:
 
         self.embedding = self._create_embedding(model.text_dim)
         
-    def predict_gestures(self, audio, text, audio_type):
+    def predict_gestures(self, audio_text, audio_array, sample_rate):
         """ Predict the gesticulation for the given audio and text inputs.
         Args:
-            audioh:  the path to the audio input or np-array of audio
-            text:        one of the three TextInputTypes (see above)
+          
+            audio_array:  np-array of audio
+            audio_text:        one of the three TextInputTypes (see above)
                    
-            NOTE: If 'text' is not a JSON, the word timing information is estimated 
+            NOTE: If 'audio_text' is not a JSON, the word timing information is estimated 
                 from the number of syllables in each word.
 
         Returns: 
             predicted_motion:  the predicted gesticulation in the exponential map representation
         """
-        text_type = self._get_text_input_type(text)
+        text_type = self._get_text_input_type(audio_text)
         
         #audio, text = self._extract_features(audio_path, text, text_type)
-        audio, text = self._extract_features(audio, text, audio_type, text_type)
+        audio, text = self._extract_features(audio_text, text_type, audio_array, sample_rate)
         audio, text = self._add_feature_padding(audio, text)
         # Add batch dimension
         audio, text = audio.unsqueeze(0), text.unsqueeze(0)
@@ -74,6 +75,8 @@ class GesturePredictor:
         return predicted_motion
 
         
+   
+
     # -------- Private methods --------
 
     def _create_embedding(self, text_dim):
@@ -151,19 +154,21 @@ class GesturePredictor:
         
         return text
     
-    #def _extract_features(self, audio_in, text_in, text_type):
-    def _extract_features(self, audio_in, text_in, audio_type, text_type):
+    #def _extract_features(self, audio_in, text_in, text_type): the original version
+   
+    def  _extract_features(self,  audio_text, text_type, audio_array, sample_rate):
         """
         Extract the features for the given input. 
         
         Args:
-            audio_in: the path to the wav file => np.array of audio data
-            text_in:  the speech as text (if estimate_word_timings is True)
+                   
+            audio_array: np array of the audio
+            audio_text:  the speech as text (if estimate_word_timings is True)
                       or the path to the JSON transcription (if estimate_word_timings is False)
         """
-        audio_features = self._extract_audio_features(audio_in, audio_type)
+        audio_features = self._extract_audio_features(audio_array,sample_rate) #MJ: we use "Spectro" feature only,  not MFCC
         #audio_features = self._extract_audio_features_from_array(audio_in)
-        text_features = self._extract_text_features(text_in, text_type, audio_features.shape[0])
+        text_features = self._extract_text_features(audio_text, text_type, audio_features.shape[0])
         # Align the vector lengths
         audio_features, text_features = self._align_vector_lengths(audio_features, text_features)
         audio = self._tensor_from_numpy(audio_features)
@@ -171,29 +176,26 @@ class GesturePredictor:
 
         return audio, text
 
-    def _extract_audio_features(self, audio_path, audio_type):
+    def _extract_audio_features(self, audio_array, sample_rate):
 
         if self.feature_type == "MFCC":
-            return tools.calculate_mfcc(audio_path)
+            return tools.calculate_mfcc(audio_array, sample_rate)
         
         if self.feature_type == "Pros":
-            return tools.extract_prosodic_features(audio_path)
+            return tools.extract_prosodic_features( audio_array, sample_rate)
         
         if self.feature_type == "MFCC+Pros":
-            mfcc_vectors = tools.calculate_mfcc(audio_path)
-            pros_vectors = tools.extract_prosodic_features(audio_path)
+            mfcc_vectors = tools.calculate_mfcc( audio_array,sample_rate)
+            pros_vectors = tools.extract_prosodic_features( audio_array, sample_rate)
             mfcc_vectors, pros_vectors = tools.shorten(mfcc_vectors, pros_vectors)
             return np.concatenate((mfcc_vectors, pros_vectors), axis=1)
         
-        if self.feature_type =="Spectro":
-            if audio_type == "array":
-               return tools.calculate_spectrogram_from_array(audio_path)
-            else: # audio_type == "file"
-               return tools.calculate_spectrogram(audio_path)
-        
+        if self.feature_type =="Spectro": # Only in this case, allow audio_array input [from CSharp script]
+            return tools.calculate_spectrogram(audio_array,sample_rate)
+                
         if self.feature_type == "Spectro+Pros":
-            spectr_vectors = tools.calculate_spectrogram(audio_path)
-            pros_vectors = tools.extract_prosodic_features(audio_path)
+            spectr_vectors = tools.calculate_spectrogram(audio_array, sample_rate)
+            pros_vectors = tools.extract_prosodic_features( audio_array, sample_rate)
             spectr_vectors, pros_vectors = tools.shorten(spectr_vectors, pros_vectors)
             return np.concatenate((spectr_vectors, pros_vectors), axis=1)
 
@@ -202,35 +204,7 @@ class GesturePredictor:
         print(f"Possible values: {self.supported_features}.")
         exit(-1)
     
-    def _extract_audio_features_from_array(self, audio):
-        if self.feature_type == "MFCC":
-            return tools.calculate_mfcc(audio)
-        
-        if self.feature_type == "Pros":
-            return tools.extract_prosodic_features(audio)
-        
-        if self.feature_type == "MFCC+Pros":
-            mfcc_vectors = tools.calculate_mfcc(audio)
-            pros_vectors = tools.extract_prosodic_features(audio)
-            mfcc_vectors, pros_vectors = tools.shorten(mfcc_vectors, pros_vectors)
-            return np.concatenate((mfcc_vectors, pros_vectors), axis=1)
-        
-        if self.feature_type =="Spectro":
-
-            return tools.calculate_spectrogram_from_array(audio)
-        
-        if self.feature_type == "Spectro+Pros":
-            spectr_vectors = tools.calculate_spectrogram(audio)
-            pros_vectors = tools.extract_prosodic_features(audio)
-            spectr_vectors, pros_vectors = tools.shorten(spectr_vectors, pros_vectors)
-            return np.concatenate((spectr_vectors, pros_vectors), axis=1)
-
-        # Unknown feature type
-        print(f"ERROR: unknown feature type '{self.feature_type}' in the 'extract_audio_features' call!")
-        print(f"Possible values: {self.supported_features}.")
-        exit(-1)
-    
-
+   
     
     def _extract_text_features(self, text, text_type, audio_len_frames):
         """
@@ -244,9 +218,10 @@ class GesturePredictor:
             text_type:  the TextInputType of the text (as above)
         """
         if text_type == self.TextInputType.JSON_PATH:
-            if isinstance(self.embedding, tuple):
+            
+            if isinstance(self.embedding, tuple): #MJ: That self.embeddeing is tuple means that is is (tokenizer, bert_model)
                 return encode_json_transcript_with_bert(
-                    text, tokenizer = self.embedding[0], bert_model = self.embedding[1])
+                    text, tokenizer = self.embedding[0], bert_model = self.embedding[1] )
             else:
                 raise Exception('ERROR: Unknown embedding: ', self.embedding)
         
@@ -258,7 +233,7 @@ class GesturePredictor:
         # At this point 'text' contains the input transcription as a string
         if isinstance(self.embedding, tuple):
             return self._estimate_word_timings_bert(
-                text, audio_len_frames, tokenizer = self.embedding[0], bert_model = self.embedding[1])
+                text, audio_len_frames, tokenizer = self.embedding[0], bert_model = self.embedding[1] )
         else:
             print('ERROR: Unknown embedding: ', self.embedding)
             exit(-1)

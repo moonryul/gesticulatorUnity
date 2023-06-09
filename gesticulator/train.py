@@ -1,6 +1,5 @@
 import os
 import sys
-
 import numpy as np
 import torch
 from argparse import ArgumentParser
@@ -59,7 +58,7 @@ def add_training_script_arguments(parser):
     return parser
 
 if __name__ == '__main__':
-
+    print(f'I am here')
     print ('cwd=' + os.getcwd() )
     print ('sys.path=', sys.path)
     # Model parameters are added here

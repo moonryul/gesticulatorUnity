@@ -167,7 +167,7 @@ def parse_bvh_node(bvhlib_node):
     return node
 
 
-def loads(s):
+def loads(s): #s = stream
     bvhlib = BVHLIB.Bvh(s)
     root = parse_bvh_node(bvhlib.get_joints()[0])
     return (

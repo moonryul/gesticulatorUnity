@@ -26,6 +26,10 @@ def create_save_dirs(model):
 def add_test_script_arguments(parser):
     parser.add_argument('--use_semantic_input', '-semantic', action="store_true",
                         help="If set, test the model with the semantic input segments")
+    
+#  Test-Segment Selection:  We selected 50 segments of 10 s for testing: 30 random segments
+# and 20 semantic segments, in which speech and recorded gestures
+# were semantically linked.
 
     parser.add_argument('--use_random_input', '-random', action="store_true",
                         help="If set, test the model with the random input segments")

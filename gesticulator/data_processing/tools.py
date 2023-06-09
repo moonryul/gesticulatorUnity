@@ -104,8 +104,8 @@ def average(arr, n):
     end = n * int(len(arr)/n)
     return np.mean(arr[:end].reshape(-1, n), 1)
 
-
-def calculate_spectrogram(audio_filename):
+#def calculate_spectrogram(audio_filename, sample_rate):
+def calculate_spectrogram(audio_array, sample_rate):
     """ Calculate spectrogram for the audio file
     Args:
         audio_filename: audio file name
@@ -117,12 +117,22 @@ def calculate_spectrogram(audio_filename):
     DIM = 64  # The number of frequency bins
 
    # Use native sample rate =>audio, sample_rate = librosa.load(audio_filename, sr=None) # sample_rate = 22080 discrete values  per second; 0.1 s = 1 frame => 2208 discrete time points per frame
-    # use the default rate of 22080:
-    audio, sample_rate = librosa.load(audio_filename)
-    # Make stereo audio being mono
-    if len(audio.shape) == 2:
-        audio = (audio[:, 0] + audio[:, 1]) / 2
+    # use the default rate of 22050:
+    
+    #MJ: If audio_array and sample_rate are NOT given, get them from audio_file
+    # if audio_array == None:
+    #   audio, sample_rate = librosa.load(audio_filename)
+    # else: #audio_array is given; in this case sample_rate is also given  
+    audio = audio_array  
 
+    print("type of audio in python=", type(audio))
+
+    # Make stereo audio being mono
+    if len(audio.shape) == 2: #audio is an np array; x.size() implies that x is a tensor
+        audio = (audio[:, 0] + audio[:, 1]) / 2
+        
+    #MJ:audio: np.ndarray [shape=(n,)] = audio time-series    
+    
     spectr = librosa.feature.melspectrogram(audio, sr=sample_rate, window = scipy.signal.hanning,
                                             #win_length=int(WINDOW_LENGTH * sample_rate),
                                             hop_length = int(WINDOW_LENGTH* sample_rate / 2), # WINDOW_LENGTH = 0.1s; hop_length = 0.05s*22080/s
@@ -135,38 +145,9 @@ def calculate_spectrogram(audio_filename):
     return np.transpose(log_spectr)
 
 
-def calculate_spectrogram_from_array(audio, sample_rate=22080):
-    """ Calculate spectrogram for the audio file
-    Args:
-        audio: np.array of sound data
-        sample_rate: sample_rate = 22080 discrete values  per second
-        
-    Returns:
-        log spectrogram values
-    """
-    
-    DIM = 64  # The number of frequency bins
 
-    #audio, sample_rate = librosa.load(audio_filename) # sample_rate = 22080 discrete values  per second; 0.1 s = 1 frame => 2208 discrete time points per frame
-    # Make stereo audio being mono
-    if len(audio.shape) == 2:
-        audio = (audio[:, 0] + audio[:, 1]) / 2
-
-    spectr = librosa.feature.melspectrogram(audio, sr=sample_rate, window = scipy.signal.hanning,
-                                            #win_length=int(WINDOW_LENGTH * sample_rate),
-                                            hop_length = int(WINDOW_LENGTH* sample_rate / 2), # WINDOW_LENGTH = 0.1s; hop_length = 0.05s*22090/s
-                                            fmax=7500, fmin=100, n_mels=DIM)
-
-    # Shift into the log scale
-    eps = 1e-10
-    log_spectr = np.log(abs(spectr)+eps) # shape = (64, 12735), where sampling points are 12735 in number
-
-    return np.transpose(log_spectr)
-
-    
-
-
-def calculate_mfcc(audio_filename):
+# def calculate_mfcc(audio_filename, audio_array=None, fs=-1):
+def calculate_mfcc(audio_array, fs):
     """
     Calculate MFCC features for the audio in a given file
     Args:
@@ -174,7 +155,15 @@ def calculate_mfcc(audio_filename):
     Returns:
         feature_vectors: MFCC feature vector for the given audio file
     """
-    fs, audio = wav.read(audio_filename)
+    
+    #MJ: If audio_array and sample_rate are NOT given, get them from audio_file
+    # if audio_array == None:
+    #   fs, audio = wav.read(audio_filename)
+      
+    # else: #audio_array is given; in this case sample_rate is also given  
+    audio = audio_array  
+      
+    # fs, audio = wav.read(audio_filename)
     # Make stereo audio being mono
     if len(audio.shape) == 2:
         audio = (audio[:, 0] + audio[:, 1]) / 2
@@ -188,7 +177,7 @@ def calculate_mfcc(audio_filename):
 
     return feature_vectors
 
-def extract_prosodic_features(audio_filename):
+def extract_prosodic_features(audio_filename, audio_array=None, sample_rate=None): #MJ: we do not use this feature        
     """
     Extract all 5 prosodic features
     Args:

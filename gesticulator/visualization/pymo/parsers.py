@@ -85,13 +85,13 @@ class BVHParser():
         
         self.data.skeleton = self._skeleton
         self.data.channel_names = self._motion_channels
-        self.data.values = self._to_DataFrame()
+        self.data.values = self._to_DataFrame()  #NJ: pd.DataFrame(data=channels, index=time_index, columns=column_names)
         self.data.root_name = self.root_name
         self.data.framerate = self.framerate
 
         return self.data
     
-    def _to_DataFrame(self):
+    def _to_DataFrame(self): #MJ:   self.data.values = self._to_DataFrame()
         '''Returns all of the channels parsed from the file as a pandas DataFrame'''
 
         import pandas as pd
@@ -100,7 +100,7 @@ class BVHParser():
         channels = np.asarray([[channel[2] for channel in frame] for frame in frames])
         column_names = ['%s_%s'%(c[0], c[1]) for c in self._motion_channels]
 
-        return pd.DataFrame(data=channels, index=time_index, columns=column_names)
+        return pd.DataFrame(data=channels, index=time_index, columns=column_names) #MJ: column-wise table creation
 
 
     def _new_bone(self, parent, name):

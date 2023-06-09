@@ -71,7 +71,7 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
             # The datasets are loaded in this constructor because they contain 
             # necessary information for building the layers (namely the audio dimensionality)
             self.load_datasets()
-            self.hparams.audio_dim = self.train_dataset.audio_dim
+            self.hparams.audio_dim = self.train_dataset.audio_dim #audio_dim = 64
             self.calculate_mean_pose()
         
         self.construct_layers(self.hparams)
@@ -134,9 +134,13 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
 # The three subsequent layers had 612, 256, and 12 or 45 nodes (the
 # output dimensionality with or without PCA).
         self.n_layers = args.n_layers
+# n_layers: 1        
+# first_l_sz: 256
+# second_l_sz: 512
+# third_l_sz: 384
 
         if self.n_layers == 1:
-            final_hid_l_sz = args.first_l_sz
+            final_hid_l_sz = args.first_l_sz  # first layer size
         elif self.n_layers == 2:
             final_hid_l_sz = args.second_l_sz
         else:
@@ -145,15 +149,18 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
         if args.use_pca:
             self.output_dim = 12
         else:
-            self.output_dim = 45
+            self.output_dim = 45  #MJ: 15 * 3 = 45 values, where 15 is the number of upper_joints excluding the fingers. It excludes the position of the hip
 
         if args.text_embedding == "BERT":
             self.text_dim = 773  # 768 (BERT word vector) + 5 (audio-related value of the word vector) = 773
         else:
             raise "Unknown word embedding"
+        
+# speech_enc_frame_dim: 124
+# full_speech_enc_dim: 612
 
         # The best model uses just one layer here, but we still define several
-        self.first_layer = nn.Sequential(nn.Linear(args.full_speech_enc_dim, args.first_l_sz),
+        self.first_layer = nn.Sequential(nn.Linear(args.full_speech_enc_dim, args.first_l_sz),  #in_dim = 612 => out_dim = 256
                                          self.activation, nn.Dropout(args.dropout))
         self.second_layer = nn.Sequential(nn.Linear(args.first_l_sz, args.second_l_sz),
                                          self.activation, nn.Dropout(args.dropout))
@@ -166,26 +173,31 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
 
         # Speech frame-level Encodigs
         if args.use_recurrent_speech_enc:
-            self.gru_size = int(args.speech_enc_frame_dim / 2)
+            self.gru_size = int(args.speech_enc_frame_dim / 2)  # 124/2
             self.gru_seq_l = args.past_context + args.future_context
             self.hidden = None
             self.encode_speech = nn.GRU(self.train_dataset.audio_dim + self.text_dim, self.gru_size, 2,
                                         dropout=args.dropout, bidirectional=True)
         else:
-            self.encode_speech = nn.Sequential(nn.Linear(self.hparams.audio_dim + self.text_dim,
-                                               args.speech_enc_frame_dim * 2), self.activation,
-                                               nn.Dropout(args.dropout), nn.Linear(args.speech_enc_frame_dim*2,
-                                                                                   args.speech_enc_frame_dim),
+            self.encode_speech = nn.Sequential( nn.Linear(self.hparams.audio_dim + self.text_dim,  # Fig 3 of the paper: self.hparams.audio_dim=64
+                                                          #   self.text_dim = 768 (BERT word vector) + 5 (audio-related value of the word vector) = 773
+                                                         args.speech_enc_frame_dim * 2), # 124 * 2 = 256
+                                               self.activation,  
+                                               nn.Dropout(args.dropout), 
+                                               nn.Linear(args.speech_enc_frame_dim*2,  #124 *2 = 256
+                                                         args.speech_enc_frame_dim),  #  124
                                                self.activation, nn.Dropout(args.dropout))
 
-        # To reduce deminsionality of the speech encoding:  producing 3720 (= 124 x 30) elements => 612 =  args.full_speech_enc_dim
-        self.reduce_speech_enc = nn.Sequential(nn.Linear(int(args.speech_enc_frame_dim * \
-                                                        (args.past_context + args.future_context)),
-                                                         args.full_speech_enc_dim),
+        # To reduce deminsionality of the speech encoding:  producing 3720 (= 124 x 30 =(10+20)) elements => 612 =  args.full_speech_enc_dim
+        # # speech_enc_frame_dim: 124
+        self.reduce_speech_enc = nn.Sequential(nn.Linear( int(args.speech_enc_frame_dim * \
+                                                              (args.past_context + args.future_context)), #  3720 
+                                                         args.full_speech_enc_dim),  # # full_speech_enc_dim: 612
                                                self.activation, nn.Dropout(args.dropout))
 
-        self.conditioning_1 = nn.Sequential(nn.Linear(self.output_dim * args.n_prev_poses,
-                                                args.first_l_sz * 2), self.activation,
+        self.conditioning_1 = nn.Sequential(  nn.Linear(  self.output_dim * args.n_prev_poses,  # = 135;  self.output_dim = 45; args.n_prev_poses=3
+                                                          args.first_l_sz * 2),  # 256 *2 = 512
+                                              self.activation,
                                             nn.Dropout(args.dropout * args.dropout_multiplier))
 
     def init_layers(self):
@@ -260,14 +272,14 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
         Generate a sequence of gestures based on a sequence of speech features (audio and text)
 
         Args:
-            audio [N, T, D_a]:    a batch of sequences of audio features
-            text  [N, T, D_t]:  a batch of sequences of text BERT embedding
+            audio [N, T, D_a]:    a batch of sequences of audio features, D_a=5
+            text  [N, T, D_t]:  a batch of sequences of text BERT embedding, D_6 = 768
             use_conditioning:     a flag indicating if we are using autoregressive conditioning
             motion: [N, T, D_m]   the true motion corresponding to the input (NOTE: it can be None during testing and validation)
             use_teacher_forcing:  a flag indicating if we use teacher forcing
 
         Returns:
-            motion [N, T, D_m]:   a batch of corresponding motion sequences
+            motion [N, T, D_m]:   a batch of corresponding motion sequences, D_m = 45
         """
 
         # initialize the motion sequence
@@ -278,31 +290,31 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
             self.initialize_rnn_hid_state()
 
         # initialize all the previous poses with the mean pose
-        init_poses = np.array([self.hparams.mean_pose for it in range(audio.shape[0])])
+        init_poses = np.array([self.hparams.mean_pose for it in range(audio.shape[0])]) #MJ: audio.shape[0]=1; shape of init_poses=(1,45)
 
         # we have to put these Tensors to the same device as the model because 
         # numpy arrays are always on the CPU
 
         # store the 3 previous poses
-        prev_poses = [torch.from_numpy(init_poses).to(self.device)] * 3
+        prev_poses = [torch.from_numpy(init_poses).to(self.device)] * 3 #MJ: 
         
         past_context   = self.hparams.past_context # = 10
         future_context = self.hparams.future_context # = 20
 
-        for time_st in range(past_context, audio.shape[1] - future_context):
+        for time_st in range(past_context, audio.shape[1] - future_context):  #  audio [N, T, D_a]:    a batch of sequences of audio features
 
             # take current audio and text of the speech
             curr_audio = audio[:, time_st - past_context:time_st+future_context]
             curr_text = text[:, time_st-past_context:time_st+future_context]
-            curr_speech = torch.cat((curr_audio, curr_text), 2)
+            curr_speech = torch.cat((curr_audio, curr_text), 2)   # dim = 5+  768 = 773
             # encode speech
             if self.hparams.use_recurrent_speech_enc:
-                speech_encoding_full, hh = self.encode_speech(curr_speech)
+                speech_encoding_full, hh = self.encode_speech(curr_speech)  # dim: 773 => 124
             else:
-                speech_encoding_full = self.encode_speech(curr_speech)
+                speech_encoding_full = self.encode_speech(curr_speech)  # speech_encoding_full: shape = (B,T,124), where T = 30 frames
 
-            speech_encoding_concat = torch.flatten(speech_encoding_full, start_dim=1)
-            speech_enc_reduced = self.reduce_speech_enc(speech_encoding_concat)
+            speech_encoding_concat = torch.flatten(speech_encoding_full, start_dim=1)  #124;124;124;,,,repeat T = 30 times: = 3720 
+            speech_enc_reduced = self.reduce_speech_enc(speech_encoding_concat)  # = 612 dim
 
             if use_conditioning:
 
@@ -316,16 +328,18 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
                 else:
                     pose_condition_info = prev_poses[-1]
 
-                conditioning_vector_1 = self.conditioning_1(pose_condition_info)
+                conditioning_vector_1 = self.conditioning_1(pose_condition_info)  
+                # dim of pose_condition_info = self.output_dim * args.n_prev_poses = 45 x 3 = 120 + 15 = 135
+                # conditioning_vector_1: shape = (B,512) 
 
             else:
                 conditioning_vector_1 = None
 
 
-            first_h = self.first_layer(speech_enc_reduced)
+            first_h = self.first_layer(speech_enc_reduced)  #  #in_dim = 612 => out_dim = 256
 
-            first_o = self.FiLM(conditioning_vector_1, first_h,
-                                self.hparams.first_l_sz, use_conditioning)
+            first_o = self.FiLM(conditioning_vector_1, first_h,  # conditioning_vector_1: shape = (B,512); first_h: shape = (B,256) = input to FiLM layer
+                                self.hparams.first_l_sz, use_conditioning)  # first_l_sz: 256
 
             #def FiLM(self, conditioning, nn_layer, hidden_size, use_conditioning):
 
@@ -384,9 +398,9 @@ class GesticulatorModel(pl.LightningModule, PredictionSavingMixin):
 
         # no conditioning initially
         if not use_conditioning:
-            output = nn_layer
-        else:
-            alpha, beta = torch.split(conditioning, (hidden_size, hidden_size), dim=1) # dim=0: x axis, dim=1: y axis
+            output = nn_layer # nn_layer: shape = (B,256) = input to FiLM layer
+        else:  # conditioning: shape = (B,512) 
+            alpha, beta = torch.split(conditioning, (hidden_size, hidden_size), dim=1) # dim=0: i axis, dim=1: j axis; hidden_size = 256
             output = nn_layer * (alpha+1) + beta
 
         return output

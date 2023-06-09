@@ -18,6 +18,11 @@ def convert_bvh2npy(bvh_file, npy_file):
 
 
 if __name__ == "__main__":
+    #MJ:The ".npy" file format is designed specifically for storing NumPy arrays.
+    # It preserves the data type, shape, and other array attributes, 
+    # allowing for easy and efficient serialization and deserialization of arrays.
+    # The format is binary, which means it stores the data in a compact, 
+    # binary representation that can be quickly read and written by NumPy.
 
     # Parse command line params
     parser = argparse.ArgumentParser(

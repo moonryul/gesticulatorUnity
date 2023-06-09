@@ -25,76 +25,120 @@ from gesticulator.visualization.motion_visualizer.generate_videos import visuali
 
 # commands = ["-m pip install -r gesticulator/requirements.txt",
 #             "-m pip install -e .",
-#             "-m pip install -e gesticulator/visualization"]  ==> gesticulator/visualization is added to sys.path, visualization foler has setup,py
+#             "-m pip install -e gesticulator/visualization"] 
+#                ==> gesticulator/visualization is added to sys.path, visualization foler has setup,py
+#                ==> "motion_visualizer" and "pymo"  packages are  installed
 
 # for cmd in commands:
 #     subprocess.check_call([sys.executable] + cmd.split())''
 
 
-def  main(args_audio, args_text):
-#def main(args):
-    # 0. Check feature type based on the model
+##def  main(audio_file, audio_text, audio_array=None,  sample_rate=-1):
+def  main1(audio_text, audio_file):
+    savedcwd = os.getcwd()
+    cwdForPython = "D:/Dropbox/metaverse/gesticulator/demo"
+    os.chdir(cwdForPython)
 
-    os.chdir("D:/Dropbox/metaverse/gesticulator/demo");
-
-    print( "os.getcwd:" + os.getcwd())
-
+    print( "I am HERE: os.getcwd:" + os.getcwd())
+    
     args = parse_args()
-    #return args.model_file
-    # cwd = os.getcwd()
-
-    # # print ("sys.path:", sys.path)
     
-    # # print ("\ncwd:", cwd)
-
-    # sys.path.add( cwd)
-    # return 10
-    # #return len(sys.path)
+    audio_array, sample_rate = librosa.load(audio_file)
     
-    feature_type, audio_dim = check_feature_type(args.model_file)
+    
+    feature_type, audio_dim = check_feature_type(args.model_file) #MJ: supported_features = ("MFCC", "Pros", "MFCC+Pros", "Spectro", "Spectro+Pros")
+    #MJ => we use "Spectro" because audio_dim  = 64
 
     # 1. Load the model
-    model = GesticulatorModel.load_from_checkpoint(
+    model = GesticulatorModel.load_from_checkpoint(  #MJ: model should be obtained in c# script once for all, not for every utterance
         args.model_file, inference_mode=True)
     # This interface is a wrapper around the model for predicting new gestures conveniently
     gp = GesturePredictor(model, feature_type)
 
     # 2. Predict the gestures with the loaded model
-    # motion = gp.predict_gestures(args.audio, args.text) # motion is a tensor: args.text is either a file path or a **string itself**
-    audio_type ="array"
-    
-    motion = gp.predict_gestures(args_audio, args_text, audio_type) #
+    #motion = gp.predict_gestures(args.audio, args.text) # motion is a tensor: args.text is either a file path or a **string itself**
+    #audio_type ="array"
+    ##def predict_gestures(self, audio_file, audio_text, audio_array, sample_rate):
+   
+    motion = gp.predict_gestures(audio_text, audio_array, sample_rate )#
+    #motion =  "input_array must be a numpy array"
     # 3. Visualize the results
     motion_length_sec = int(motion.shape[1] / 20)
 
    
 
-    # visualize(motion.detach(), "temp.bvh", "temp.npy", "temp.mp4", 
-    #           start_t = 0, end_t = motion_length_sec, 
-    #           data_pipe_dir = '../gesticulator/utils/data_pipe.sav')
+    visualize(motion.detach(), "temp.bvh", "temp.npy", "temp.mp4", 
+              start_t = 0, end_t = motion_length_sec, 
+              data_pipe_dir = '../gesticulator/utils/data_pipe.sav')
 
-    # # Add the audio to the video
-    # command = f"ffmpeg -y -i {args.audio} -i temp.mp4 -c:v libx264 -c:a libvorbis -loglevel quiet -shortest {args.video_out}"
-    # subprocess.call(command.split())
+    # Add the audio to the video
+    command = f"ffmpeg -y -i {args.audio} -i temp.mp4 -c:v libx264 -c:a libvorbis -loglevel quiet -shortest {args.video_out}"
+    subprocess.call(command.split())
 
-    # print("\nGenerated video:", args.video_out)
+    print("\nGenerated video:", args.video_out)
     
-    # # Remove temporary files
-    # for ext in ["npy", "mp4"]:
-    #     os.remove("temp." + ext)
+    # Remove temporary files
+    for ext in ["npy", "mp4"]:
+        os.remove("temp." + ext)
+    
+    # List of list <==> 2D numpy array:
+    # https://stackoverflow.com/questions/64791850/converting-a-list-of-lists-into-a-2d-numpy-array
+    # https://stackoverflow.com/questions/9721884/convert-2d-numpy-array-into-list-of-lists
 
-    #resultMat = motion.detach().numpy().tolist()[0];
+    #resultMat = motion.detach().numpy()[0].tolist() # This will convert matrix to a list of lists
     resultMat = motion.detach().numpy()[0]
+
+    print("type of resultMat in python=\n", type(resultMat))
     #print ( resultMat )
+    #length_of_motion = resultMat.shape[0] #==520
+    #print(f"length_of_motion={length_of_motion}\n"); # length_of_motion=528 ?? not 520?
+    
+    # for i in range( length_of_motion ):   
+    #   print(str(i) + ":")
+    #   for  j in range(45):
+    #      print (  resultMat[i][j], end=' ')    
 
-    for i in range(520):   
-      print(str(i) + ":")
-      for  j in range(45):
-         print (  resultMat[i][j], end=' ')    
+    #   print("\n")      
+    
+    #restore the original cwd
+    os.chdir(savedcwd)
+    return resultMat
 
-      print("\n")      
     
     
+def  main2(audio_text, audio_array,  sample_rate):
+
+    #save the current working directory
+    savedcwd = os.getcwd()
+    cwdForPython = "D:/Dropbox/metaverse/gesticulator/demo"
+    os.chdir(cwdForPython)
+
+    print( "I am HERE: os.getcwd:" + os.getcwd())
+         
+ 
+    args = parse_args()
+    
+    feature_type, audio_dim = check_feature_type(args.model_file) #MJ: supported_features = ("MFCC", "Pros", "MFCC+Pros", "Spectro", "Spectro+Pros")
+    #MJ => we use "Spectro" because audio_dim  = 64
+
+    # 1. Load the model
+    model = GesticulatorModel.load_from_checkpoint(  #MJ: model should be obtained in c# script once for all, not for every utterance
+        args.model_file, inference_mode=True)
+    # This interface is a wrapper around the model for predicting new gestures conveniently
+    gp = GesturePredictor(model, feature_type)
+
+    # 2. Predict the gestures with the loaded model
+      
+    motion = gp.predict_gestures(audio_text, audio_array, sample_rate )#
+    # 3. Visualize the results
+    motion_length_sec = int(motion.shape[1] / 20)
+
+    resultMat = motion.detach().numpy()[0]
+
+    print("type of resultMat in python=\n", type(resultMat))
+    
+    #restore the original cwd
+    os.chdir(savedcwd)
     return resultMat
 
 def check_feature_type(model_file):
@@ -161,6 +205,6 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == "__main__":
-    #args = parse_args()
+    args = parse_args()
     
-    main()
+    main1(args.text, args.audio)

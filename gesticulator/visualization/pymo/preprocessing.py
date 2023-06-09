@@ -34,7 +34,7 @@ class MocapParameterizer(BaseEstimator, TransformerMixin):
         elif self.param_type == 'expmap':
             return self._to_expmap(X)
         elif self.param_type == 'quat':
-            return X
+            return X                    #MJ: should be: self._to_quat(X)?
         elif self.param_type == 'position':
             return self._to_pos(X)
         elif self.param_type == 'expmap2pos':
@@ -66,7 +66,10 @@ class MocapParameterizer(BaseEstimator, TransformerMixin):
             channels = []
             titles = []
             euler_df = track.values
-
+            #MJ: self.data = MocapData()
+            # self.data.values = self._to_DataFrame() 
+            # #NJ: pd.DataFrame(data=channels, index=time_index, columns=column_names)
+            #pandas = Python Data Analysis Library; DataFrame = table in SQL
             # Create a new DataFrame to store the exponential map rep
             pos_df = pd.DataFrame(index=euler_df.index)
 
@@ -244,7 +247,7 @@ class MocapParameterizer(BaseEstimator, TransformerMixin):
                     tree_data[joint][1] = q.reshape(k.shape[0],3) + tree_data[parent][1]
 
 
-                # Create the corresponding columns in the new DataFrame
+                # Create the corresponding columns in the new DataFrame: '%s_Xposition'%joint => 'hand_Xposition', if joint='hand'
                 pos_df['%s_Xposition'%joint] = pd.Series(data=tree_data[joint][1][:,0], index=pos_df.index)
                 pos_df['%s_Yposition'%joint] = pd.Series(data=tree_data[joint][1][:,1], index=pos_df.index)
                 pos_df['%s_Zposition'%joint] = pd.Series(data=tree_data[joint][1][:,2], index=pos_df.index)
@@ -560,7 +563,7 @@ class JointSelector(BaseEstimator, TransformerMixin):
     '''
     Allows for filtering the mocap data to include only the selected joints
     '''
-    def __init__(self, joints, include_root=False):
+    def __init__(self, joints, include_root=False): # include_root = True when invoked in bvh2features.py
         self.joints = joints
         self.include_root = include_root
 

@@ -25,7 +25,7 @@ def convert_bvh2npy(bvh_file, npy_file):
 
 
 def visualize(
-    input_array,
+    input_array, #MJ: "Motion output from the network (in quaterinions)"
     output_path,
     start_t=0,
     end_t=10,
@@ -33,9 +33,11 @@ def visualize(
     data_pipe_path=__DEFAULT_DAT_FILE_LOCATION,
 ):
     assert isinstance(input_array, np.ndarray), "input_array must be a numpy array"
+    
     with tempfile.NamedTemporaryFile(
         suffix=".bhv"
     ) as bvh_file, tempfile.NamedTemporaryFile(suffix=".npy") as npy_file:
+        
         write_bvh(data_pipe_path, input_array, bvh_file.name, fps)
 
         # Extract 3D coordinates
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create video from npy file")
 
     parser.add_argument(
-        "input", help="Motion output from the network (in quaterinions)"
+        "input", help="Motion output from the network (in quaterinions)" #MJ: expmap instead of quaternions?
     )
     parser.add_argument("output_path", help="Output path for video")
 

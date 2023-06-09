@@ -13,7 +13,8 @@ from pymo.writers import *
 
 def visualize(motion_in, bvh_file, npy_file, mp4_file, start_t, end_t, data_pipe_dir):
 
-    #  https://github.com/SciSharp/Numpy.NET: Converting a PyTorch Tensor to a Numpy array is straightforward, since tensors are ultimately built on top of Numpy arrays, and all we have to do is "expose" the underlying data structure
+    #  https://github.com/SciSharp/Numpy.NET: Converting a PyTorch Tensor to a Numpy array is straightforward, 
+    # //since tensors are ultimately built on top of Numpy arrays, and all we have to do is "expose" the underlying data structure
 
 
 #     Converting between a TensorFlow tf.Tensor and a NumPy ndarray is easy:
@@ -21,7 +22,7 @@ def visualize(motion_in, bvh_file, npy_file, mp4_file, start_t, end_t, data_pipe
 # TensorFlow operations automatically convert NumPy ndarrays to Tensors.
 # NumPy operations automatically convert Tensors to NumPy ndarrays.
 # Tensors are explicitly converted to NumPy ndarrays using their .numpy() method. 
-# hese conversions are typically cheap since the array and tf.Tensor share the underlying memory representation, if possible. 
+# These conversions are typically cheap since the array and tf.Tensor share the underlying memory representation, if possible. 
 # However, sharing the underlying representation isn't always possible since the tf.Tensor may be hosted in GPU memory
 #  while NumPy arrays are always backed by host memory, and the conversion involves a copy from GPU to host memory.
 
