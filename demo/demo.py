@@ -15,7 +15,7 @@ from gesticulator.model.model import GesticulatorModel
 from gesticulator.interface.gesture_predictor import GesturePredictor
 from gesticulator.visualization.motion_visualizer.generate_videos import visualize
 
-from motion_visualizer.convert2bvh import write_bvh
+from gesticulator.visualization.motion_visualizer.convert2bvh import write_bvh
 
 # sys.path = ['D:\\dropbox\\metaverse\\gesticulator\\demo', 'C:\\Users\\moon\\anaconda3\\envs\\gest_env\\python36.zip',
 # 'C:\\Users\\moon\\anaconda3\\envs\\gest_env\\DLLs', 'C:\\Users\\moon\\anaconda3\\envs\\gest_env\\lib',

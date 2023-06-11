@@ -6,12 +6,17 @@ import sys
 
 import torch
 import librosa
+import numpy as np
+import joblib
+from gesticulator.visualization.pymo.writers import BVHWriter
 
 # Python 3.3 and above, any folder (even without a __init__.py file) is considered a package'
 
 from gesticulator.model.model import GesticulatorModel
 from gesticulator.interface.gesture_predictor import GesturePredictor
 from gesticulator.visualization.motion_visualizer.generate_videos import visualize
+
+from gesticulator.visualization.motion_visualizer.convert2bvh import write_bvh
 
 #sys.path = ['D:\\dropbox\\metaverse\\gesticulator\\demo', 'C:\\Users\\moon\\anaconda3\\envs\\gest_env\\python36.zip', 
 # 'C:\\Users\\moon\\anaconda3\\envs\\gest_env\\DLLs', 'C:\\Users\\moon\\anaconda3\\envs\\gest_env\\lib', 
@@ -35,112 +40,133 @@ from gesticulator.visualization.motion_visualizer.generate_videos import visuali
 
 ##def  main(audio_file, audio_text, audio_array=None,  sample_rate=-1):
 def  main1(audio_text, audio_file):
-    savedcwd = os.getcwd()
-    cwdForPython = "D:/Dropbox/metaverse/gesticulator/demo"
-    os.chdir(cwdForPython)
-
-    print( "I am HERE: os.getcwd:" + os.getcwd())
-    
-    args = parse_args()
     
     audio_array, sample_rate = librosa.load(audio_file)
     
+    joint_angles = main(audio_text, audio_array,  sample_rate)
     
-    feature_type, audio_dim = check_feature_type(args.model_file) #MJ: supported_features = ("MFCC", "Pros", "MFCC+Pros", "Spectro", "Spectro+Pros")
-    #MJ => we use "Spectro" because audio_dim  = 64
-
-    # 1. Load the model
-    model = GesticulatorModel.load_from_checkpoint(  #MJ: model should be obtained in c# script once for all, not for every utterance
-        args.model_file, inference_mode=True)
-    # This interface is a wrapper around the model for predicting new gestures conveniently
-    gp = GesturePredictor(model, feature_type)
-
-    # 2. Predict the gestures with the loaded model
-    #motion = gp.predict_gestures(args.audio, args.text) # motion is a tensor: args.text is either a file path or a **string itself**
-    #audio_type ="array"
-    ##def predict_gestures(self, audio_file, audio_text, audio_array, sample_rate):
-   
-    motion = gp.predict_gestures(audio_text, audio_array, sample_rate )#
-    #motion =  "input_array must be a numpy array"
-    # 3. Visualize the results
-    motion_length_sec = int(motion.shape[1] / 20)
-
-   
-
-    visualize(motion.detach(), "temp.bvh", "temp.npy", "temp.mp4", 
-              start_t = 0, end_t = motion_length_sec, 
-              data_pipe_dir = '../gesticulator/utils/data_pipe.sav')
-
-    # Add the audio to the video
-    command = f"ffmpeg -y -i {args.audio} -i temp.mp4 -c:v libx264 -c:a libvorbis -loglevel quiet -shortest {args.video_out}"
-    subprocess.call(command.split())
-
-    print("\nGenerated video:", args.video_out)
+    bvh_file ="gen_motion.bvh"
     
-    # Remove temporary files
-    for ext in ["npy", "mp4"]:
-        os.remove("temp." + ext)
-    
-    # List of list <==> 2D numpy array:
-    # https://stackoverflow.com/questions/64791850/converting-a-list-of-lists-into-a-2d-numpy-array
-    # https://stackoverflow.com/questions/9721884/convert-2d-numpy-array-into-list-of-lists
-
-    #resultMat = motion.detach().numpy()[0].tolist() # This will convert matrix to a list of lists
-    resultMat = motion.detach().numpy()[0]
-
+    resultMat = joint_angles
     print("type of resultMat in python=\n", type(resultMat))
     #print ( resultMat )
-    #length_of_motion = resultMat.shape[0] #==520
-    #print(f"length_of_motion={length_of_motion}\n"); # length_of_motion=528 ?? not 520?
-    
-    # for i in range( length_of_motion ):   
+    length_of_motion = resultMat.shape[0] # e.g. ==528
+    # print(f"length_of_motion={length_of_motion}\n"); # 
+
+    hipPosAndRot = np.ndarray( (length_of_motion,6), dtype=np.float32)
+    # set the position and rotation of the Hips joint.
+    for i in range( length_of_motion ):
     #   print(str(i) + ":")
     #   for  j in range(45):
-    #      print (  resultMat[i][j], end=' ')    
-
-    #   print("\n")      
+    #      print (  resultMat[i][j], end=' ')
+        hipPosAndRot[i,:] = [0,0,0,0,0,0]
     
-    #restore the original cwd
-    os.chdir(savedcwd)
-    return resultMat
+    
+    resultMat =  np.concatenate([hipPosAndRot, resultMat], dim=1)
+    
+    writer = BVHWriter()
+    for i in range(0, resultMat.shape[0]):
+        with open(bvh_file, "w") as f:
+            writer.write( resultMat[i], f, framerate=20) 
+  
 
+
+# changing the current working directory temporarily:
+ 
+# # Get the current working directory
+# current_directory = os.getcwd()
+
+# # Set the path to the submodule's demo.py file
+# submodule_directory = os.path.join(current_directory, "gesticulatorUnity")
+
+# # Execute the main function with a modified current directory
+# try:
+#     os.chdir(submodule_directory)
+#     main()
+# finally:
+#     os.chdir(current_directory)
     
     
 def  main2(audio_text, audio_array,  sample_rate):
 
-    #save the current working directory
-    savedcwd = os.getcwd()
-    cwdForPython = "D:/Dropbox/metaverse/gesticulator/demo"
-    os.chdir(cwdForPython)
-
-    print( "I am HERE: os.getcwd:" + os.getcwd())
-         
- 
-    args = parse_args()
     
-    feature_type, audio_dim = check_feature_type(args.model_file) #MJ: supported_features = ("MFCC", "Pros", "MFCC+Pros", "Spectro", "Spectro+Pros")
-    #MJ => we use "Spectro" because audio_dim  = 64
-
-    # 1. Load the model
-    model = GesticulatorModel.load_from_checkpoint(  #MJ: model should be obtained in c# script once for all, not for every utterance
-        args.model_file, inference_mode=True)
-    # This interface is a wrapper around the model for predicting new gestures conveniently
-    gp = GesturePredictor(model, feature_type)
-
-    # 2. Predict the gestures with the loaded model
-      
-    motion = gp.predict_gestures(audio_text, audio_array, sample_rate )#
-    # 3. Visualize the results
-    motion_length_sec = int(motion.shape[1] / 20)
-
-    resultMat = motion.detach().numpy()[0]
-
+    joint_angles = main(audio_text, audio_array,  sample_rate)
+    
+    bvh_file ="gen_motion.bvh"
+    
+    resultMat = joint_angles
     print("type of resultMat in python=\n", type(resultMat))
+    #print ( resultMat )
+    length_of_motion = resultMat.shape[0] # e.g. ==528
+    # print(f"length_of_motion={length_of_motion}\n"); # 
+
+    hipPosAndRot = np.ndarray( (length_of_motion,6), dtype=np.float32)
+    # set the position and rotation of the Hips joint.
+    for i in range( length_of_motion ):
+    #   print(str(i) + ":")
+    #   for  j in range(45):
+    #      print (  resultMat[i][j], end=' ')
+        hipPosAndRot[i,:] = [0,0,0,0,0,0]
     
-    #restore the original cwd
-    os.chdir(savedcwd)
+    
+    resultMat =  np.concatenate([hipPosAndRot, resultMat], dim=1)
+    
+    writer = BVHWriter()
+    for i in range(0, resultMat.shape[0]):
+        with open(bvh_file, "w") as f:
+            writer.write( resultMat[i], f, framerate=20)
+
+    
+      
     return resultMat
 
+def main(audio_text, audio_array,  sample_rate):
+    
+    
+    current_directory = os.getcwd()
+  # Set the path to the submodule's demo.py file
+    submodule_directory = os.path.join(current_directory, "gesticulatorUnity")
+    
+    try:
+        os.chdir(submodule_directory)
+        args = parse_args()
+        
+        #audio_array, sample_rate = librosa.load(audio_file)
+        
+        
+        feature_type, audio_dim = check_feature_type(args.model_file) #MJ: supported_features = ("MFCC", "Pros", "MFCC+Pros", "Spectro", "Spectro+Pros")
+        #MJ => we use "Spectro" because audio_dim  = 64
+
+        # 1. Load the model
+        model = GesticulatorModel.load_from_checkpoint(  #MJ: model should be obtained in c# script once for all, not for every utterance
+            args.model_file, inference_mode=True)
+        # This interface is a wrapper around the model for predicting new gestures conveniently
+        gp = GesturePredictor(model, feature_type)
+
+        # 2. Predict the gestures with the loaded model
+        #motion = gp.predict_gestures(args.audio, args.text) # motion is a tensor: args.text is either a file path or a **string itself**
+        #audio_type ="array"
+        ##def predict_gestures(self, audio_file, audio_text, audio_array, sample_rate):
+    
+        predicted_motion = gp.predict_gestures(audio_text, audio_array, sample_rate )#
+        #motion =  "input_array must be a numpy array"
+        # 3. Visualize the results
+        motion_length_sec = int(predicted_motion.shape[1] / 20)
+        
+        
+        predicted_motion = gp.predict_gestures(audio_text, audio_array, sample_rate)
+        #MJ: =>   predicted_motion = self.model.forward(audio, text, use_conditioning=True, motion=None)
+        #         return predicted_motion
+        
+        joint_angles = _convert_to_euler_angles(predicted_motion) 
+    
+    finally:        
+    # restore the original cwd
+       os.chdir(current_directory)    
+       
+    return joint_angles
+        
+        
 def check_feature_type(model_file):
     """
     Return the audio feature type and the corresponding dimensionality
@@ -174,6 +200,51 @@ def check_feature_type(model_file):
 
     return feature_type, audio_dim
 
+def _convert_to_euler_angles(self, predicted_motion):
+        """
+        Convert the motion returned by Gesticulator to joint
+        rotations around the X, Y and Z axes (relative to the T-pose).
+
+        Args:
+            predicted_motion:  the output of the Gesticulator model
+        
+        Returns:
+            rotations:  a numpy array of joint rotations with a shape of (n_frames, 15, 3)
+                        where 15 is the number of joints supported by Gesticulator
+                        and 3 is the number of axes (X,Y,Z)    
+        """
+        # The pipeline contains the transformations from data preprocessing
+        # It allows us to convert from exponential maps to euler angles
+        data_pipe_dir='../gesticulator/utils/data_pipe.sav'
+        #data_pipeline = joblib.load("../utils/data_pipe.sav")
+        data_pipeline = joblib.load(data_pipe_dir)
+        
+        motion_array = predicted_motion.detach().numpy()
+        # NOTE: 'inverse_transform' returns a list with one MoCapData object
+        joint_angles = data_pipeline.inverse_transform(motion_array)[0].values
+
+        # Gesticulator only supports these 15 joints
+        joint_names = [
+            'Spine', 'Spine1', 'Spine2', 'Spine3', 'Neck', 'Neck1', 'Head',
+            'RightShoulder', 'RightArm', 'RightForeArm', 'RightHand',
+            'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand']
+
+        n_joints = len(joint_names)
+        n_frames = joint_angles.shape[0]
+
+        # The output joint angles will be stored in 3 separate arrays
+        rotations = np.empty((n_frames, n_joints, 3)) 
+
+        for joint_idx, joint_name in enumerate(joint_names):
+            
+            x = joint_angles[joint_name + '_Xrotation']
+            y = joint_angles[joint_name + '_Yrotation']
+            z = joint_angles[joint_name + '_Zrotation']
+
+            for frame_idx in range(n_frames):
+                rotations[frame_idx, joint_idx, :] = [x[frame_idx], y[frame_idx], z[frame_idx]]
+
+        return rotations
 
 def truncate_audio(input_path, target_duration_sec):
     """
