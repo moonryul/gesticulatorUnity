@@ -77,9 +77,9 @@ def main1(audio_text, audio_file):
               20)  
     #MJ => inv_data = data_pipeline.inverse_transform(motion)
     #MJ: commented out from the original code: 
-    # visualize(motion.detach(), "temp.bvh", "temp.npy", "temp.mp4",
-    #           start_t=0, end_t=motion_length_sec,
-    #           data_pipe_dir='../gesticulator/utils/data_pipe.sav') #MJ: data_pipe_dir contains an object of class PipeLine
+    visualize(predicted_motion.detach(), "temp.bvh", "temp.npy", "temp.mp4",
+              start_t=0, end_t=motion_length_sec,
+              data_pipe_dir='../gesticulator/utils/data_pipe.sav') #MJ: data_pipe_dir contains an object of class PipeLine
     
     # #MJ: note that the pipeline dir ../gesticulator/utils/data_pipe.sav was created by
     # # jl.dump(data_pipe, os.path.join(pipeline_dir + 'data_pipe.sav')) in python bvh2features.py, when "python bvh2features.py" is executed for preprocessing
