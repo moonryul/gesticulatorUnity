@@ -1,5 +1,8 @@
 from setuptools import setup
 
+#The presence of either setup.py or pyproject.toml file in the current directory signals
+# to pip that the directory is a package folder.
+
 setup(name='gesticulator',
       version='0.1',
       description='Gesture generation',

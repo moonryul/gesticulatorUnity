@@ -34,11 +34,8 @@ from gesticulator.visualization.motion_visualizer.convert2bvh import write_bvh
 # for cmd in commands:
 #     subprocess.check_call([sys.executable] + cmd.split())''
 
-def main1(audio_text, audio_file):
-    savedcwd = os.getcwd()
-    cwdForPython = "D:/Dropbox/metaverse/gesticulator/demo"
-    os.chdir(cwdForPython)
-
+def main(audio_text, audio_file):
+    
     print("I am HERE: os.getcwd:" + os.getcwd())
 
     args = parse_args()
@@ -64,19 +61,19 @@ def main1(audio_text, audio_file):
     #MJ: =>   predicted_motion = self.model.forward(audio, text, use_conditioning=True, motion=None)
     #         return predicted_motion
      
-    joint_angles = _convert_to_euler_angles(predicted_motion) 
-    #motion =  "input_array must be a numpy array"
-    # 3. Visualize the results
-    motion_length_sec = int(predicted_motion.shape[1] / 20)
-    data_pipe_dir='../gesticulator/utils/data_pipe.sav'
-    bvh_file ="gen_motion.bvh"
+    # joint_angles = _convert_to_euler_angles(predicted_motion) 
+    # #motion =  "input_array must be a numpy array"
+    # # 3. Visualize the results
+    motion_length_sec = int(predicted_motion.shape[1] / 20)  #MJ: 520 frames/20 frames per sec = sec
+    # data_pipe_dir='../gesticulator/utils/data_pipe.sav'
+    # bvh_file ="gen_motion.bvh"
     
-    write_bvh((data_pipe_dir,), # write_bvh expects a tuple
-              predicted_motion.detach(),
-              bvh_file,
-              20)  
+    # write_bvh((data_pipe_dir,), # write_bvh expects a tuple
+    #           predicted_motion.detach(),
+    #           bvh_file,
+    #           20)  
     #MJ => inv_data = data_pipeline.inverse_transform(motion)
-    #MJ: commented out from the original code: 
+   
     visualize(predicted_motion.detach(), "temp.bvh", "temp.npy", "temp.mp4",
               start_t=0, end_t=motion_length_sec,
               data_pipe_dir='../gesticulator/utils/data_pipe.sav') #MJ: data_pipe_dir contains an object of class PipeLine
@@ -84,15 +81,15 @@ def main1(audio_text, audio_file):
     # #MJ: note that the pipeline dir ../gesticulator/utils/data_pipe.sav was created by
     # # jl.dump(data_pipe, os.path.join(pipeline_dir + 'data_pipe.sav')) in python bvh2features.py, when "python bvh2features.py" is executed for preprocessing
 
-    # # Add the audio to the video
-    # command = f"ffmpeg -y -i {args.audio} -i temp.mp4 -c:v libx264 -c:a libvorbis -loglevel quiet -shortest {args.video_out}"
-    # subprocess.call(command.split())
+    #  Add the audio to the video
+    command = f"ffmpeg -y -i {args.audio} -i temp.mp4 -c:v libx264 -c:a libvorbis -loglevel quiet -shortest {args.video_out}"
+    subprocess.call(command.split())
 
-    # print("\nGenerated video:", args.video_out)
+    print("\nGenerated video:", args.video_out)
 
     # # Remove temporary files
-    # for ext in ["npy", "mp4"]:
-    #     os.remove("temp." + ext)
+    for ext in ["npy", "mp4"]:
+         os.remove("temp." + ext)
 
     # List of list <==> 2D numpy array:
     # https://stackoverflow.com/questions/64791850/converting-a-list-of-lists-into-a-2d-numpy-array
@@ -100,22 +97,7 @@ def main1(audio_text, audio_file):
 
     # resultMat = motion.detach().numpy()[0].tolist() # This will convert matrix to a list of lists
   
-    resultMat = joint_angles
-    print("type of resultMat in python=\n", type(resultMat))
-    #print ( resultMat )
-    # length_of_motion = resultMat.shape[0] #==520
-    # print(f"length_of_motion={length_of_motion}\n"); # length_of_motion=528 ?? not 520?
-
-    # for i in range( length_of_motion ):
-    #   print(str(i) + ":")
-    #   for  j in range(45):
-    #      print (  resultMat[i][j], end=' ')
-
-    #   print("\n")
-
-    # restore the original cwd
-    os.chdir(savedcwd)
-    #return resultMat
+   
 
 def check_feature_type(model_file):
     """
@@ -231,4 +213,4 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    main1(args.text, args.audio)
+    main(args.text, args.audio)

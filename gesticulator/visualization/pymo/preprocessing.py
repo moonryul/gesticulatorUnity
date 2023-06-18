@@ -264,9 +264,12 @@ class MocapParameterizer(BaseEstimator, TransformerMixin):
         for track in X:
             channels = []
             titles = []
-            euler_df = track.values
+            
+            euler_df = track.values  #MJ: = pd.DataFrame(data=channels, index=time_index, columns=column_names) 
+            
 
             # Create a new DataFrame to store the exponential map rep
+            
             exp_df = euler_df.copy()# pd.DataFrame(index=euler_df.index)
 
             # Copy the root positions into the new DataFrame
@@ -285,29 +288,53 @@ class MocapParameterizer(BaseEstimator, TransformerMixin):
 
             for joint in joints:
                 #print(joint)
+                #MJ: rots = all rotation channels.
                 r = euler_df[[c for c in rots if joint in c]] # Get the columns that belong to this joint
-                rot_order = track.skeleton[joint]['order']
-                r1_col = '%s_%srotation'%(joint, rot_order[0])
-                r2_col = '%s_%srotation'%(joint, rot_order[1])
-                r3_col = '%s_%srotation'%(joint, rot_order[2])
                 
-                exp_df.drop([r1_col, r2_col, r3_col], axis=1, inplace=True)
-                euler = [[f[1][r1_col], f[1][r2_col], f[1][r3_col]] for f in r.iterrows()]
+                rot_order = track.skeleton[joint]['order']
+                
+                r1_col = '%s_%srotation'%(joint, rot_order[0])  #MJ: r1_col ="Spine_Zrotation"
+                r2_col = '%s_%srotation'%(joint, rot_order[1])  #MJ: r2_col ="Spine_Xrotation"
+                r3_col = '%s_%srotation'%(joint, rot_order[2])  #MJ: r3_col ="Spine_Yrotation"
+                
+                exp_df.drop( [r1_col, r2_col, r3_col], axis=1, inplace=True) 
+                #MJ: drop rows or columns by indices and axis
+            #     >>> df = pd.DataFrame(np.arange(12).reshape(3,4),
+            #       ...                   columns=['A', 'B', 'C', 'D'])
+            #    >>> df
+            #         A  B   C   D
+            #       0  0  1   2   3
+            #       1  4  5   6   7
+            #       2  8  9  10  11
+            #      Drop columns
+
+            #    >>> df.drop(['B', 'C'], axis=1)
+            #            A   D
+            #          0  0   3
+            #          1  4   7
+            #          2  8  11
+                
+                euler = [ [f[1][r1_col], f[1][r2_col], f[1][r3_col]]  for f in r.iterrows()]  #MJ: r = the rot channels of each joint
                 #exps = [Rotation(f, 'euler', from_deg=True, order=rot_order).to_expmap() for f in euler] # Convert the eulers to exp maps
+                
                 exps = unroll(np.array([euler2expmap(f, rot_order, True) for f in euler])) # Convert the exp maps to eulers
-                #exps = euler2expmap2(euler, rot_order, True) # Convert the eulers to exp maps
+                
+                #exps = euler2expmap2(euler, rot_order, True) # Convert the eulers to exp maps; rot_order='XYZ' by default
 
                 # Create the corresponding columns in the new DataFrame
+                #MJ: Series is a one-dimensional array with index labels.
     
                 exp_df.insert(loc=0, column='%s_gamma'%joint, value=pd.Series(data=[e[2] for e in exps], index=exp_df.index))
                 exp_df.insert(loc=0, column='%s_beta'%joint, value=pd.Series(data=[e[1] for e in exps], index=exp_df.index))
                 exp_df.insert(loc=0, column='%s_alpha'%joint, value=pd.Series(data=[e[0] for e in exps], index=exp_df.index))
-
+            #for joint in joints
+            
             #print(exp_df.columns)
             new_track = track.clone()
             new_track.values = exp_df
             Q.append(new_track)
-
+        #for track in X
+        
         return Q
 
     def _expmap_to_euler(self, X):
@@ -610,7 +637,7 @@ class JointSelector(BaseEstimator, TransformerMixin):
         for track in X:
             t2 = track.clone()
             t2.skeleton = self.orig_skeleton
-            for d in self.not_selected:
+            for d in self.not_selected: #Lower limbs and fingers = 123 items
                 t2.values[d] = self.not_selected_values[d]
             Q.append(t2)
 
@@ -641,15 +668,29 @@ class Numpyfier(BaseEstimator, TransformerMixin):
             
         return np.array(Q)
 
-    def inverse_transform(self, X, copy=None):
+    def inverse_transform(self, X, copy=None): #MJ: self: Numpyfier
         Q = []
 
         for track in X:
             
-            new_mocap = self.org_mocap_.clone()
-            time_index = pd.to_timedelta([f for f in range(track.shape[0])], unit='s')
-
+            new_mocap = self.org_mocap_.clone()  #MJ: applying the inverse-transform of Numpyfier comes down to obtaining the original motion data, because the original data is numpy array
+            time_index = pd.to_timedelta([f for f in range(track.shape[0])], unit='s') #MJ: track.shape[0]=520
+            #MJ: self.org_mocap_.values: [0 rows x 45 columns]
             new_df =  pd.DataFrame(data=track, index=time_index, columns=self.org_mocap_.values.columns)
+            
+# class pandas.DataFrame(data=None, index=None, columns=None, dtype=None, copy=None)[source]
+#    data: ndarray         
+# DataFrame.index The index (row labels) of the DataFrame.
+
+# DataFrame.columns The column labels of the DataFrame.
+# df2 = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+#     ...                    columns=['a', 'b', 'c'])
+#     >>> df2
+#        a  b  c
+#     0  1  2  3
+#     1  4  5  6
+#     2  7  8  9
+
             
             new_mocap.values = new_df
             

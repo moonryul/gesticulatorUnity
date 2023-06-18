@@ -294,7 +294,8 @@ class MocapParameterizer(BaseEstimator, TransformerMixin):
             for joint in joints:
                 print(joint)
                 r = euler_df[[c for c in rots if joint in c]] # Get the columns that belong to this joint
-                rot_order = track.skeleton[joint]['order']
+                rot_order = track.skeleton[joint]['order'] #MJ: rot_order='ZXY' in our case
+                
                 r1_col = '%s_%srotation'%(joint, rot_order[0])
                 r2_col = '%s_%srotation'%(joint, rot_order[1])
                 r3_col = '%s_%srotation'%(joint, rot_order[2])

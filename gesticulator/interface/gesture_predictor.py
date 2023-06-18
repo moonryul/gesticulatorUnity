@@ -12,7 +12,7 @@ from transformers import BertTokenizer, BertModel
 from gesticulator.data_processing.text_features.parse_json_transcript import encode_json_transcript_with_bert, get_bert_embedding
 from gesticulator.data_processing import tools
 from gesticulator.model.model import GesticulatorModel
-from motion_visualizer.convert2bvh import write_bvh
+from motion_visualizer.convert2bvh import write_bvh #MJ: within visualization package
 from motion_visualizer.bvh2npy import convert_bvh2npy
 from gesticulator.data_processing.text_features.syllable_count import count_syllables
 from gesticulator.visualization.motion_visualizer.generate_videos import visualize

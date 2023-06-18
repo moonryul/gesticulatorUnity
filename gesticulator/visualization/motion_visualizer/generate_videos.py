@@ -12,20 +12,7 @@ from motion_visualizer.convert2bvh import write_bvh
 from pymo.writers import *
 
 def visualize(motion_in, bvh_file, npy_file, mp4_file, start_t, end_t, data_pipe_dir):
-
-    #  https://github.com/SciSharp/Numpy.NET: Converting a PyTorch Tensor to a Numpy array is straightforward, 
-    # //since tensors are ultimately built on top of Numpy arrays, and all we have to do is "expose" the underlying data structure
-
-
-#     Converting between a TensorFlow tf.Tensor and a NumPy ndarray is easy:
-
-# TensorFlow operations automatically convert NumPy ndarrays to Tensors.
-# NumPy operations automatically convert Tensors to NumPy ndarrays.
-# Tensors are explicitly converted to NumPy ndarrays using their .numpy() method. 
-# These conversions are typically cheap since the array and tf.Tensor share the underlying memory representation, if possible. 
-# However, sharing the underlying representation isn't always possible since the tf.Tensor may be hosted in GPU memory
-#  while NumPy arrays are always backed by host memory, and the conversion involves a copy from GPU to host memory.
-
+ 
 
     """
     Create and save a video from the given raw gesture data.
@@ -42,7 +29,8 @@ def visualize(motion_in, bvh_file, npy_file, mp4_file, start_t, end_t, data_pipe
     motion_clip = motion_in # np.expand_dims(motion_in, axis=0)
 
     write_bvh((data_pipe_dir,), # write_bvh expects a tuple
-              motion_clip,
+              motion_clip, #MJ: motion_clip is in theta*axis format (exponential map), and write_bvh converts them to euler angles 
+                           #MJ: It restores the unused joints to their original fixed values as well. 
               bvh_file,
               20)
 

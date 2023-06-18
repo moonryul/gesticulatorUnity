@@ -22,9 +22,9 @@ module_path = os.path.abspath(os.path.join('..'))
 if module_path not in sys.path:
     sys.path.append(module_path)
 
-from pymo.parsers import BVHParser
+from pymo.parsers import BVHParser #MJ: within visualization package
 from pymo.data import Joint, MocapData
-from pymo.preprocessing import *
+from pymo.preprocessing import *  #MJ: DownSampler, RootTransformer, Mirror, JointSelector, MoCapParameterizer, ConstantRemover, Numifier
 from pymo.writers import *
 
 import joblib as jl
@@ -35,7 +35,7 @@ def extract_joint_angles(bvh_dir, files, dest_dir, pipeline_dir, fps):
     if not os.path.exists(pipeline_dir):
         raise Exception("Pipeline dir for the motion processing ", pipeline_dir, " does not exist! Change -pipe flag value.")
 
-    data_all = list()
+    data_all = list() #MJ: a list of parsed bvh files
     for f in files:
         ff = os.path.join(bvh_dir, f + '.bvh')
         print(ff)
@@ -57,7 +57,8 @@ def extract_joint_angles(bvh_dir, files, dest_dir, pipeline_dir, fps):
 # it automatically applies each step in the defined order to the input data, 
 # passing the transformed data from one step to the next. This makes it easier to manage
 # and reproduce complex workflows involving multiple data preprocessing and modeling steps.
-    out_data = data_pipe.fit_transform(data_all)
+    out_data = data_pipe.fit_transform(data_all) #MJ: data_all = a list of parsed bvh files
+    #MJ:  def fit_transform(self, X, y=None, **fit_params): X=training dataset, y = training target
      
 #MJ:  def fit_transform(self, X, y=None, **fit_params) returns
 # Transformed samples, Xt : ndarray of shape (n_samples, n_transformed_features)
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     files = []
     # Go over all BVH files
     print("Going to pre-process the following motion files:")
-    for r, d, f in os.walk(params.bvh_dir): #MJ: r = root directory, d= dir witihnr, f = all the files in r
+    for r, d, f in os.walk(params.bvh_dir): #MJ: r = root directory, d= dir witihn r, f = all the files in r
         for file in f:
             print(file)
             if '.bvh' in file:
